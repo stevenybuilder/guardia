@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/stevenyang/Documents/jetbrains-hackathon && JAVA_HOME=/usr/local/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./gradlew test --quiet 2>&1 | tail -40 ; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

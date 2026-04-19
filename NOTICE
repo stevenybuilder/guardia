@@ -1,0 +1,25 @@
+Datadog Proactive — JetBrains Hackathon Submission
+
+This plugin is licensed under the Apache License 2.0 (see LICENSE).
+
+─── Upstream credit ───────────────────────────────────────────────────────────
+
+• Scaffolded on the JetBrains IntelliJ Platform Plugin Template
+  https://github.com/JetBrains/intellij-platform-plugin-template
+  Apache License 2.0, Copyright (c) JetBrains s.r.o.
+
+• "Datadog" is a trademark of Datadog, Inc. This project is NOT a fork of,
+  affiliated with, or endorsed by Datadog. References to Datadog services and
+  naming conventions are used to demonstrate a hackathon integration concept;
+  actual runtime data comes from a mock fixture by default.
+  Reference: https://github.com/DataDog/datadog-for-intellij-platform
+
+• Demo codebase: https://github.com/DataDog/tsre-microservices
+  Apache License 2.0, cloned on first `./gradlew runIde` as sandbox content only.
+
+─── Third-party runtime dependencies ──────────────────────────────────────────
+
+• Square OkHttp 4.12.0 — Apache-2.0
+• Square Moshi 1.15.1 — Apache-2.0
+• Kotlin stdlib 2.1.20 — Apache-2.0 (provided by IntelliJ Platform at runtime)
+• IntelliJ Platform SDK (IC 2025.2.6.1) — Apache-2.0

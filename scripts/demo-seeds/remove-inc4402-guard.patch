@@ -1,0 +1,16 @@
+diff --git a/src/paymentservice/src/main/java/com/hipstershop/paymentservicejava/PaymentServiceImpl.java b/src/paymentservice/src/main/java/com/hipstershop/paymentservicejava/PaymentServiceImpl.java
+--- a/src/paymentservice/src/main/java/com/hipstershop/paymentservicejava/PaymentServiceImpl.java
++++ b/src/paymentservice/src/main/java/com/hipstershop/paymentservicejava/PaymentServiceImpl.java
+@@ -36,12 +36,6 @@ public class PaymentServiceImpl extends PaymentServiceGrpc.PaymentServiceImplBas
+                 log.finest("Test credit card number received. Will not charge the card.");
+             }
+             
+-            // INC-4402: guard against NPE when credit card is missing before clearPayment.
+-            if (request == null || request.getCreditCard() == null) {
+-                log.warning("charge() called without a credit card; rejecting (INC-4402 guard).");
+-                responseObserver.onError(new IllegalArgumentException("credit card required"));
+-                return;
+-            }
+             String transactionId = "none";
+             try {
+                 transactionId = controller.clearPayment(request);

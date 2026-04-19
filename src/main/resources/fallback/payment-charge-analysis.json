@@ -1,0 +1,9 @@
+{
+  "method": "PaymentService.charge",
+  "final_score": 85,
+  "baseline_score": 60,
+  "codex_delta": 25,
+  "affected_services": ["payment-service", "order-service"],
+  "recommendation": "Hold this PR — reintroduces INC-4402 null-check at PaymentService:142 (cached analysis).",
+  "citations": ["INC-4402"]
+}

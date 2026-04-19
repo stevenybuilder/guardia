@@ -1,0 +1,81 @@
+[
+  {
+    "type": "ToolCallStarted",
+    "step": 2,
+    "tool": "get_diff"
+  },
+  {
+    "type": "ToolCallCompleted",
+    "step": 2,
+    "tool": "get_diff",
+    "summary": "14 lines added in PaymentService.java — exponential backoff",
+    "elapsedMs": 42
+  },
+  {
+    "type": "ToolCallStarted",
+    "step": 3,
+    "tool": "compute_baseline_score"
+  },
+  {
+    "type": "ToolCallCompleted",
+    "step": 3,
+    "tool": "compute_baseline_score",
+    "summary": "70 — elevated error rate + active deploy window",
+    "elapsedMs": 6
+  },
+  {
+    "type": "ToolCallStarted",
+    "step": 4,
+    "tool": "get_related_incidents"
+  },
+  {
+    "type": "ToolCallCompleted",
+    "step": 4,
+    "tool": "get_related_incidents",
+    "summary": "matched open incident INC-4417 via keywords [retry, backoff, stripe]",
+    "elapsedMs": 110
+  },
+  {
+    "type": "IncidentsRetrieved",
+    "incidents": [
+      {
+        "id": "INC-4417",
+        "service": "payment-service",
+        "status": "OPEN",
+        "severity": "SEV-2",
+        "title": "Elevated 5xx on PaymentService.charge in EU region",
+        "description": "Error rate on PaymentService.charge spiked 8x starting 09:12 UTC. EU customers primarily affected.",
+        "rootCause": "Retry loop added in commit b82a11c lacks backoff, amplifying 429s from Stripe.",
+        "offendingMethods": ["PaymentService.charge"],
+        "offendingFiles": ["services/payment-service/src/main/java/com/swagstore/payment/PaymentService.java"],
+        "offendingCodeSnippet": "while (result == null && attempts++ < 5) {\n  result = stripe.charges().create(params); // no backoff\n}",
+        "keywords": ["retry", "stripe", "429", "backoff", "charge"],
+        "openedAt": "2026-04-16T09:12:00Z",
+        "resolvedAt": null
+      }
+    ]
+  },
+  {
+    "type": "ToolCallStarted",
+    "step": 5,
+    "tool": "finalize_risk"
+  },
+  {
+    "type": "ToolCallCompleted",
+    "step": 5,
+    "tool": "finalize_risk",
+    "summary": "final 45 (Δ-25) — addresses open incident INC-4417",
+    "elapsedMs": 32
+  },
+  {
+    "type": "Finalized",
+    "verdict": {
+      "finalScore": 45,
+      "baselineScore": 70,
+      "codexDelta": -25,
+      "affectedServices": ["payment-service"],
+      "recommendation": "Ship with confidence — this diff adds the exponential backoff INC-4417 currently needs. Suggest mentioning the incident ID in the PR description.",
+      "citations": ["INC-4417"]
+    }
+  }
+]

@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Guardia · Live Incident Feed</title>
+<style>
+  :root {
+    --dd-purple: #632CA6;
+    --dd-purple-2: #8a4fd3;
+    --bg: #1a1a1a;
+    --bg-2: #141414;
+    --card: #2b2b2b;
+    --card-2: #222;
+    --line: #333;
+    --text: #e6e6e8;
+    --muted: #aeb0b6;
+    --dim: #6e6e6e;
+    --green: #4caf50;
+    --amber: #e6a23c;
+    --red: #e5484d;
+    --blue: #5aa7ff;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 Helvetica, Arial, "SF Pro Text", sans-serif;
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-x: hidden;
+  }
+
+  /* ===== Header ===== */
+  header.topbar {
+    background: linear-gradient(90deg, #3a1b66 0%, #632CA6 55%, #8a4fd3 100%);
+    padding: 16px 28px;
+    border-bottom: 1px solid #00000066;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 16px #0008;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .paw {
+    width: 30px; height: 30px;
+    background: #fff;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+    box-shadow: 0 0 0 3px #ffffff22;
+  }
+  .brand .paw::before,
+  .brand .paw::after {
+    content: "";
+    position: absolute;
+    background: var(--dd-purple);
+    border-radius: 50%;
+  }
+  .brand .paw::before { width: 10px; height: 10px; top: 5px; left: 10px; }
+  .brand .paw::after  { width: 8px;  height: 8px;  bottom: 6px; right: 7px; }
+  .brand h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin: 0;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .brand .sub {
+    font-weight: 400;
+    opacity: 0.85;
+    margin-left: 6px;
+    letter-spacing: 0.04em;
+  }
+  .counts { display: flex; gap: 22px; }
+  .counts .count {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .counts .count .n {
+    display: block;
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .counts .count .l {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #ffffffb0;
+  }
+
+  /* ===== Layout ===== */
+  main {
+    padding: 20px 28px 40px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  section.block { margin-bottom: 28px; }
+  section.block h2 {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+
+  /* ===== Service grid ===== */
+  .service-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  @media (max-width: 1000px) {
+    .service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 680px) {
+    .service-grid { grid-template-columns: 1fr; }
+  }
+  .svc-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .svc-card .row1 {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .svc-card .name { font-weight: 600; color: #fff; font-size: 14px; }
+  .svc-card .team {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .svc-card .metrics {
+    display: flex; gap: 18px; font-variant-numeric: tabular-nums;
+    color: var(--muted); font-size: 11px;
+  }
+  .svc-card .metrics b { color: var(--text); font-weight: 500; }
+  .svc-card svg.sparkline { width: 100%; height: 36px; display: block; }
+  .svc-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .svc-badges .deploy-on {
+    background: #632CA633;
+    border: 1px solid #632CA688;
+    color: #c7a6ff;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .svc-badges .openinc {
+    background: #e5484d22;
+    border: 1px solid #e5484d66;
+    color: #ff8b90;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ===== Filter bar ===== */
+  .filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filters input[type="text"],
+  .filters select {
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+  }
+  .filters input[type="text"] { width: 320px; }
+  .filters input[type="text"]:focus,
+  .filters select:focus { border-color: var(--dd-purple-2); }
+  .filters .result-count {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ===== Incident list ===== */
+  .inc-list {
+    max-height: 560px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg-2);
+  }
+  .inc-list::-webkit-scrollbar { width: 10px; }
+  .inc-list::-webkit-scrollbar-thumb { background: #333; border-radius: 5px; }
+  .inc-list::-webkit-scrollbar-track { background: transparent; }
+
+  .inc {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .inc:last-child { border-bottom: none; }
+  .inc:hover { background: #1f1f1f; }
+  .inc.open { background: #202028; }
+
+  .inc-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .inc-id {
+    color: var(--muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+  }
+  .sev {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 10px;
+    text-transform: uppercase;
+  }
+  .sev.SEV-1 { background: #e5484d22; border: 1px solid #e5484d; color: #ff8b90; }
+  .sev.SEV-2 { background: #e6a23c22; border: 1px solid #e6a23c; color: #ffc46b; }
+  .sev.SEV-3 { background: #5aa7ff22; border: 1px solid #5aa7ff; color: #8fc2ff; }
+  .sev.SEV-4 { background: #6e6e6e33; border: 1px solid #6e6e6e; color: #bbb; }
+  .status {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .status.open { background: #e5484d22; color: #ff8b90; border: 1px solid #e5484d66; }
+  .status.resolved { background: #4caf5022; color: #8fe59a; border: 1px solid #4caf5066; }
+  .svc-badge {
+    background: #632CA633;
+    border: 1px solid #632CA666;
+    color: #c7a6ff;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.04em;
+  }
+  .inc-ts {
+    margin-left: auto;
+    color: var(--dim);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .inc-title {
+    margin: 6px 0 2px;
+    font-size: 13px;
+    color: #fff;
+    font-weight: 500;
+  }
+  .inc-desc {
+    color: var(--muted);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+  }
+  .inc.open .inc-desc { -webkit-line-clamp: unset; }
+
+  .inc-detail {
+    display: none;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+  }
+  .inc.open .inc-detail { display: block; }
+  .inc-detail dt {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-top: 8px;
+  }
+  .inc-detail dd {
+    margin: 3px 0 0;
+    color: var(--text);
+    font-size: 12px;
+  }
+  .kw-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .kw {
+    background: #ffffff0f;
+    color: var(--muted);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+  }
+
+  pre.code {
+    background: #0d0d10;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #d4d4d4;
+    margin: 4px 0 0;
+  }
+  /* single-rule "syntax highlighting" — keyword/string/comment via simple wraps */
+  pre.code .k { color: #c586c0; }      /* keyword */
+  pre.code .s { color: #ce9178; }      /* string  */
+  pre.code .c { color: #6a9955; font-style: italic; } /* comment */
+  pre.code .n { color: #b5cea8; }      /* number */
+
+  .empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--dim);
+    font-size: 12px;
+  }
+
+  /* ===== footer ===== */
+  footer {
+    color: var(--dim);
+    text-align: center;
+    padding: 10px 0 30px;
+    font-size: 11px;
+  }
+
+  /* Action row below the purple header: quick links to the real Datadog console
+     and the standalone dashboard. Professional, no emoji. */
+  .action-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 12px 28px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+  }
+  .action-row .label {
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 10px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .action-row a {
+    color: var(--blue);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .action-row a:hover {
+    background: rgba(90, 167, 255, 0.08);
+    border-color: rgba(90, 167, 255, 0.25);
+  }
+  .action-row a .arrow {
+    color: var(--muted);
+    margin-left: 4px;
+    font-weight: 300;
+  }
+  .action-row .dot {
+    color: var(--dim);
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="paw" aria-hidden="true"></span>
+    <h1>Guardia <span class="sub">· Live Incident Feed</span></h1>
+  </div>
+  <div class="counts" id="counts">
+    <div class="count"><span class="n" id="c-svc">–</span><span class="l">Services</span></div>
+    <div class="count"><span class="n" id="c-inc">–</span><span class="l">Incidents</span></div>
+    <div class="count"><span class="n" id="c-evt">–</span><span class="l">Events</span></div>
+  </div>
+</header>
+
+<nav class="action-row" aria-label="External dashboards">
+  <span class="label">Jump to</span>
+  <a href="#" data-guardia-link="datadog" title="Open the live Datadog Events Explorer (filtered to source:guardia)">Datadog Events Explorer<span class="arrow">↗</span></a>
+  <span class="dot">·</span>
+  <a href="#" data-guardia-link="localDashboard" title="Open this dashboard standalone in your default browser">Standalone dashboard<span class="arrow">↗</span></a>
+</nav>
+
+<main>
+  <section class="block">
+    <h2>Service health</h2>
+    <div class="service-grid" id="service-grid"></div>
+  </section>
+
+  <section class="block">
+    <h2>Incidents</h2>
+    <div class="filters">
+      <input type="text" id="f-search" placeholder="Search by title, description, keyword…" />
+      <select id="f-sev">
+        <option value="">All severities</option>
+        <option value="SEV-1">SEV-1</option>
+        <option value="SEV-2">SEV-2</option>
+        <option value="SEV-3">SEV-3</option>
+        <option value="SEV-4">SEV-4</option>
+      </select>
+      <select id="f-status">
+        <option value="">All statuses</option>
+        <option value="open">Open</option>
+        <option value="resolved">Resolved</option>
+      </select>
+      <span class="result-count" id="result-count"></span>
+    </div>
+    <div class="inc-list" id="inc-list">
+      <div class="empty">Loading fixtures…</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Mock fixture data · bundled with Guardia plugin · offline-safe
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  const state = {
+    services: [],
+    incidents: [],
+    events: [],
+    filtered: [],
+    openIds: new Set(),
+    filter: { search: "", severity: "", status: "" }
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  function esc(s) {
+    if (s == null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // Lightweight "syntax highlighting" with zero deps. Operates on escaped HTML.
+  function hl(code) {
+    let s = esc(code);
+    // Line comments first (// ...) and block comments (/* ... */)
+    s = s.replace(/(\/\*[\s\S]*?\*\/|\/\/[^\n]*)/g, '<span class="c">$1</span>');
+    // Strings (single or double quotes, simple)
+    s = s.replace(/("[^"\n]*"|'[^'\n]*')/g, '<span class="s">$1</span>');
+    // Numbers
+    s = s.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="n">$1</span>');
+    // Keywords (a broad Java/Kotlin/TS-ish set)
+    const kw = /\b(if|else|while|for|return|null|new|var|val|let|const|function|def|public|private|protected|static|void|int|long|boolean|class|interface|try|catch|finally|throw|throws|package|import|true|false|this|super)\b/g;
+    s = s.replace(kw, '<span class="k">$1</span>');
+    return s;
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "–";
+    try {
+      const d = new Date(iso);
+      const y = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      return `${y}-${mo}-${da} ${hh}:${mm}`;
+    } catch (e) { return iso; }
+  }
+
+  function sparklineSvg(values) {
+    if (!values.length) {
+      return `<svg class="sparkline" viewBox="0 0 100 36" preserveAspectRatio="none">
+        <text x="50" y="22" text-anchor="middle" fill="#6e6e6e" font-size="9">no events</text>
+      </svg>`;
+    }
+    const max = Math.max(...values, 1);
+    const min = Math.min(...values, 0);
+    const range = Math.max(max - min, 1);
+    const n = values.length;
+    const step = n > 1 ? 100 / (n - 1) : 100;
+    const pts = values.map((v, i) => {
+      const x = +(i * step).toFixed(2);
+      const y = +(32 - ((v - min) / range) * 28).toFixed(2);
+      return `${x},${y}`;
+    }).join(" ");
+    const area = `0,34 ${pts} 100,34`;
+    return `<svg class="sparkline" viewBox="0 0 100 36" preserveAspectRatio="none">
+      <polygon points="${area}" fill="#632CA633" />
+      <polyline points="${pts}" fill="none" stroke="#8a4fd3" stroke-width="1.4" vector-effect="non-scaling-stroke" />
+    </svg>`;
+  }
+
+  // Bucket error events by hour of day for a simple 24-point sparkline.
+  function serviceSparkline(serviceName) {
+    const buckets = new Array(24).fill(0);
+    let found = 0;
+    for (const e of state.events) {
+      if (e.service !== serviceName) continue;
+      if (e.severity !== "error" && e.type !== "metric_spike" && e.type !== "alert_fired") continue;
+      found++;
+      try {
+        const h = new Date(e.timestamp).getUTCHours();
+        if (!Number.isNaN(h)) buckets[h]++;
+      } catch (_) {}
+    }
+    return found ? sparklineSvg(buckets) : sparklineSvg([]);
+  }
+
+  function renderServices() {
+    const root = $("service-grid");
+    if (!state.services.length) {
+      root.innerHTML = '<div class="empty">No services.</div>';
+      return;
+    }
+    const parts = state.services.map((s) => {
+      const deploy = s.deploy_window_today
+        ? '<span class="deploy-on">Deploy window</span>' : "";
+      const open = (s.open_incident_count || 0) > 0
+        ? `<span class="openinc">${s.open_incident_count} open</span>` : "";
+      const err = s.error_rate_1h != null ? (s.error_rate_1h * 100).toFixed(2) + "%" : "–";
+      const vel = s.change_velocity_7d != null ? s.change_velocity_7d : "–";
+      const vol = s.request_volume_1h != null ? s.request_volume_1h.toLocaleString() : "–";
+      return `<div class="svc-card">
+        <div class="row1">
+          <div>
+            <div class="name">${esc(s.name)}</div>
+            <div class="team">${esc(s.team || "–")} · ${esc(s.language || "")}</div>
+          </div>
+          <div class="svc-badges">${deploy}${open}</div>
+        </div>
+        ${serviceSparkline(s.name)}
+        <div class="metrics">
+          <span><b>${err}</b> err/1h</span>
+          <span><b>${vel}</b> deploys/7d</span>
+          <span><b>${vol}</b> req/1h</span>
+        </div>
+      </div>`;
+    });
+    root.innerHTML = parts.join("");
+  }
+
+  function applyFilter() {
+    const q = state.filter.search.trim().toLowerCase();
+    const sev = state.filter.severity;
+    const st = state.filter.status;
+    state.filtered = state.incidents.filter((i) => {
+      if (sev && i.severity !== sev) return false;
+      if (st && i.status !== st) return false;
+      if (!q) return true;
+      const hay = [
+        i.id, i.title, i.description,
+        i.root_cause, i.root_cause_hypothesis,
+        ...(i.keywords || []),
+        i.service
+      ].filter(Boolean).join(" ").toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+  }
+
+  function renderIncidents() {
+    const root = $("inc-list");
+    $("result-count").textContent =
+      `${state.filtered.length} of ${state.incidents.length} incidents`;
+    if (!state.filtered.length) {
+      root.innerHTML = '<div class="empty">No incidents match current filters.</div>';
+      return;
+    }
+    const parts = state.filtered.map((i) => {
+      const open = state.openIds.has(i.id) ? " open" : "";
+      const cause = i.root_cause || i.root_cause_hypothesis || "–";
+      const snippet = i.offending_code_snippet || "";
+      const kws = (i.keywords || []).map((k) =>
+        `<span class="kw">${esc(k)}</span>`).join("");
+      const files = i.offending_file
+        ? `<dt>Offending file</dt><dd>${esc(i.offending_file)}</dd>`
+        : "";
+      const methods = (i.offending_methods || []).length
+        ? `<dt>Methods</dt><dd>${(i.offending_methods || []).map(esc).join(", ")}</dd>`
+        : "";
+      const resolution = i.resolution
+        ? `<dt>Resolution</dt><dd>${esc(i.resolution)}</dd>`
+        : "";
+      const snippetHtml = snippet
+        ? `<dt>Offending code</dt><dd><pre class="code"><code>${hl(snippet)}</code></pre></dd>`
+        : "";
+      return `<div class="inc${open}" data-id="${esc(i.id)}">
+        <div class="inc-head">
+          <span class="inc-id">${esc(i.id)}</span>
+          <span class="sev ${esc(i.severity || "")}">${esc(i.severity || "–")}</span>
+          <span class="status ${esc(i.status || "")}">${esc(i.status || "–")}</span>
+          <span class="svc-badge">${esc(i.service || "")}</span>
+          <span class="inc-ts">${esc(fmtDate(i.opened_at))}</span>
+        </div>
+        <div class="inc-title">${esc(i.title || "")}</div>
+        <div class="inc-desc">${esc(i.description || "")}</div>
+        <div class="inc-detail">
+          <dt>Root cause</dt><dd>${esc(cause)}</dd>
+          ${files}
+          ${methods}
+          ${snippetHtml}
+          ${resolution}
+          ${kws ? `<dt>Keywords</dt><dd><div class="kw-tags">${kws}</div></dd>` : ""}
+        </div>
+      </div>`;
+    });
+    root.innerHTML = parts.join("");
+    // event delegation is already set up once on the container
+  }
+
+  function wireFilters() {
+    $("f-search").addEventListener("input", (e) => {
+      state.filter.search = e.target.value;
+      applyFilter(); renderIncidents();
+    });
+    $("f-sev").addEventListener("change", (e) => {
+      state.filter.severity = e.target.value;
+      applyFilter(); renderIncidents();
+    });
+    $("f-status").addEventListener("change", (e) => {
+      state.filter.status = e.target.value;
+      applyFilter(); renderIncidents();
+    });
+    $("inc-list").addEventListener("click", (e) => {
+      const card = e.target.closest(".inc");
+      if (!card) return;
+      const id = card.dataset.id;
+      if (state.openIds.has(id)) state.openIds.delete(id);
+      else state.openIds.add(id);
+      card.classList.toggle("open");
+    });
+  }
+
+  function renderCounts() {
+    $("c-svc").textContent = state.services.length.toLocaleString();
+    $("c-inc").textContent = state.incidents.length.toLocaleString();
+    $("c-evt").textContent = state.events.length.toLocaleString();
+  }
+
+  function sortIncidents() {
+    // Open first, then newest opened_at first.
+    state.incidents.sort((a, b) => {
+      const ao = a.status === "open" ? 0 : 1;
+      const bo = b.status === "open" ? 0 : 1;
+      if (ao !== bo) return ao - bo;
+      return String(b.opened_at || "").localeCompare(String(a.opened_at || ""));
+    });
+  }
+
+  function showLoadError(msg) {
+    $("inc-list").innerHTML =
+      `<div class="empty">Couldn't load fixtures: ${esc(msg)}<br>
+      Open this file via the plugin's "Open Datadog Feed" button
+      — the fixture is copied next to index.html at click time.</div>`;
+  }
+
+  fetch("./datadog-fixtures.json", { cache: "no-cache" })
+    .then((r) => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then((data) => {
+      state.services = Array.isArray(data.services) ? data.services : [];
+      state.incidents = Array.isArray(data.incidents) ? data.incidents : [];
+      state.events = Array.isArray(data.events) ? data.events : [];
+      sortIncidents();
+      applyFilter();
+      renderCounts();
+      renderServices();
+      renderIncidents();
+      wireFilters();
+    })
+    .catch((e) => {
+      console.error(e);
+      showLoadError(e.message || String(e));
+    });
+})();
+</script>
+</body>
+</html>

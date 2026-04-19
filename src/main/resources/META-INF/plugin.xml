@@ -1,0 +1,109 @@
+<idea-plugin>
+    <id>com.stevenyang.datadogproactive</id>
+    <name>Guardia</name>
+    <vendor email="stevenybusiness@gmail.com" url="https://github.com/stevenyang/jetbrains-hackathon">Steven Yang</vendor>
+
+    <description><![CDATA[
+        Guardia — proactive observability + PR blast-radius risk scoring, live in the IntelliJ editor.
+        <br/>
+        <ul>
+          <li>Gutter icons surface live incidents + error-rate deltas on methods of interest.</li>
+          <li>"Analyze PR Risk" runs a hybrid heuristic + OpenAI Codex agent-mode reasoning trace.</li>
+        </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
+    <depends>Git4Idea</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Application-scoped: loads datadog-fixtures.json once, builds 8 HashMap indexes. -->
+        <applicationService
+            serviceImplementation="com.datadog.proactive.fixtures.FixtureLoader"/>
+
+        <!-- (a) Gutter icon on methods-of-interest -->
+        <codeInsight.lineMarkerProvider
+            language="JAVA"
+            implementationClass="com.stevenyang.datadogproactive.gutter.DatadogLineMarkerProvider"/>
+
+        <!-- (a2) Proactive top-of-editor banner when file contains methods-of-interest.
+             Users see risk flags without hovering the gutter or clicking anything. -->
+        <editorNotificationProvider
+            implementation="com.stevenyang.datadogproactive.editor.DatadogEditorNotificationProvider"/>
+
+        <!-- (b) Right-anchored tool window hosting the risk card -->
+        <toolWindow
+            id="Guardia"
+            anchor="right"
+            icon="/icons/datadog-risk.svg"
+            factoryClass="com.stevenyang.datadogproactive.toolwindow.DatadogRiskToolWindowFactory"/>
+
+        <!-- (c) Project-scoped DatadogService wiring.
+             DatadogServiceProvider is the single implementation bound to the DatadogService
+             interface — it delegates to either MockDatadogService or RealDatadogService
+             based on DatadogProactiveSettings.useRealDatadog, resolved per call (no restart).
+             Mock and Real are registered as concrete services so the Provider can look them
+             up via project.getService(ConcreteClass::class.java). -->
+        <projectService
+            serviceImplementation="com.datadog.proactive.datadog.MockDatadogService"/>
+        <projectService
+            serviceImplementation="com.datadog.proactive.datadog.RealDatadogService"/>
+        <projectService
+            serviceInterface="com.datadog.proactive.datadog.DatadogService"
+            serviceImplementation="com.datadog.proactive.datadog.DatadogServiceProvider"/>
+
+        <!-- Risk analysis coordinator — assembles Layer 1 (heuristic) + Layer 2 (Codex) per call.
+             Toolbar action resolves this service and subscribes to its Flow<RiskEvent>. -->
+        <projectService
+            serviceImplementation="com.proactive.coordinator.DefaultRiskAnalysisCoordinator"/>
+
+        <!-- Codex agent-loop: project-scoped Cached client (memory → live → pre-recorded fallback). -->
+        <projectService
+            serviceInterface="com.proactive.codex.CodexAgentLoop"
+            serviceImplementation="com.proactive.codex.ProjectCachedCodexClient"/>
+
+        <!-- Application-level persistent settings (model, base URL, USE_REAL_DATADOG flag) -->
+        <applicationService
+            serviceImplementation="com.stevenyang.datadogproactive.settings.DatadogProactiveSettings"/>
+
+        <!-- Optional Supabase remediation audit logger. No-op if not configured. -->
+        <applicationService
+            serviceImplementation="com.stevenyang.datadogproactive.audit.SupabaseAuditClient"/>
+
+        <!-- Balloon-style notification group used by Settings mode-flip + Test-connection. -->
+        <notificationGroup
+            id="Guardia"
+            displayType="BALLOON"/>
+
+        <!-- Sweeps ActiveFileListener + ProactiveRiskHighlighter across already-open
+             editors at project-open, so Wedge 1 highlights appear without requiring the
+             user to activate the tool window first. -->
+        <postStartupActivity
+            implementation="com.stevenyang.datadogproactive.startup.HighlighterStartupActivity"/>
+
+        <!-- Settings panel under Tools -->
+        <applicationConfigurable
+            parentId="tools"
+            instance="com.stevenyang.datadogproactive.settings.DatadogProactiveConfigurable"
+            id="com.stevenyang.datadogproactive.settings"
+            displayName="Guardia"/>
+    </extensions>
+
+    <actions>
+        <!-- (d) "Analyze PR Risk" toolbar action.
+             IJ 2025.2 New UI main toolbar is split into MainToolbarLeft/Center/Right slots.
+             MainToolbarRight is the rightmost cluster (next to the search field / settings).
+             MainToolbarCenter is a secondary fallback. ToolsMenu + keyboard shortcut guarantee
+             discoverability even if the New UI collapses the slot into an overflow menu. -->
+        <action id="DatadogProactive.AnalyzePrRisk"
+                class="com.stevenyang.datadogproactive.action.AnalyzePrRiskAction"
+                text="Analyze PR Risk"
+                description="Run hybrid heuristic + Codex blast-radius analysis on the current Git diff"
+                icon="/icons/datadog-risk.svg">
+            <add-to-group group-id="MainToolbarRight" anchor="last"/>
+            <add-to-group group-id="MainToolbarCenter" anchor="last"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt shift R"/>
+        </action>
+    </actions>
+</idea-plugin>
